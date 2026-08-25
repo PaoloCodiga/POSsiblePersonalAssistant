@@ -6,7 +6,7 @@ from odoo import fields
 
 from .fake_provider import FakeProvider
 from .openai_provider import OpenAiProvider
-from .prompts import MESSAGE_ANALYSIS_PROMPT_VERSION
+from .prompts import MESSAGE_ANALYSIS_PROMPT_VERSION, MEETING_ANALYSIS_PROMPT_VERSION
 
 _logger = logging.getLogger(__name__)
 
@@ -29,6 +29,27 @@ class IntelligenceService:
             message.write({"ai_processed": True, "ai_summary": result["summary"], "ai_category": result["category"], "ai_importance": result["importance"], "ai_confidence": result["confidence"], "requires_reply": result["requires_reply"], "requires_action": result["requires_action"]})
             for action in result.get("suggested_actions", []):
                 self.env["ppa.suggested.action"].create({"name": action["title"], "description": action.get("description"), "priority": action.get("priority", "normal"), "due_date": self._due_date(action.get("due_date")), "source_type": "message", "source_message_id": message.id, "ai_analysis_id": analysis.id, "ai_confidence": action.get("confidence", 0), "ai_reason": action.get("reason")})
+            return analysis
+
+    def analyze_meeting(self, meeting):
+        provider = self._provider()
+        analysis = self.env["ppa.ai.analysis"].create({"name": "AI analysis: %s" % meeting.name, "source_type": "meeting", "meeting_id": meeting.id, "provider": provider.name, "model": "fake" if provider.name == "fake" else os.getenv("PPA_OPENAI_MODEL", ""), "prompt_version": MEETING_ANALYSIS_PROMPT_VERSION, "status": "processing"})
+        try:
+            result = provider.analyze_meeting(meeting)
+            if result.get("importance") not in dict(self.env["ppa.suggested.action"]._fields["priority"].selection) or not 0 <= float(result.get("confidence", -1)) <= 1:
+                raise ValueError("Provider returned an invalid meeting analysis result.")
+            analysis.write({"status": "completed", "summary": result["summary"], "importance": result["importance"], "confidence": result["confidence"], "raw_response_json": json.dumps(result), "processed_at": fields.Datetime.now()})
+            meeting.write({"ai_processed": True, "ai_summary": result["summary"], "ai_importance": result["importance"], "ai_confidence": result["confidence"]})
+            for decision in result.get("decisions", []):
+                self.env["ppa.decision"].create({"name": decision["title"], "description": decision.get("description"), "source_type": "meeting", "source_meeting_id": meeting.id, "ai_analysis_id": analysis.id})
+            for action in result.get("suggested_actions", []):
+                self.env["ppa.suggested.action"].create({"name": action["title"], "description": action.get("description"), "priority": action.get("priority", "normal"), "source_type": "meeting", "source_meeting_id": meeting.id, "ai_analysis_id": analysis.id, "ai_confidence": action.get("confidence", 0), "ai_reason": action.get("reason")})
+            for question in result.get("open_questions", []):
+                self.env["ppa.open.question"].create({"name": question["question"], "meeting_id": meeting.id, "ai_analysis_id": analysis.id, "importance": question.get("importance", "normal"), "confidence": question.get("confidence", 0), "company_id": meeting.company_id.id, "project_id": meeting.project_id.id})
+            return analysis
+        except Exception as error:
+            _logger.warning("PPA AI analysis %s failed for meeting %s: %s", analysis.id, meeting.id, error)
+            analysis.write({"status": "failed", "error_message": str(error)[:500], "processed_at": fields.Datetime.now()})
             return analysis
         except Exception as error:
             _logger.warning("PPA AI analysis %s failed for message %s: %s", analysis.id, message.id, error)

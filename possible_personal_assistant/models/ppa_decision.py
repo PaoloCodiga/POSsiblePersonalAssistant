@@ -17,6 +17,7 @@ class PpaDecision(models.Model):
     source_type = fields.Selection([("message", "Message"), ("meeting", "Meeting"), ("manual", "Manual")], default="manual", required=True, tracking=True)
     source_message_id = fields.Many2one("ppa.message", ondelete="restrict", tracking=True)
     source_meeting_id = fields.Many2one("ppa.meeting", ondelete="restrict", tracking=True)
+    ai_analysis_id = fields.Many2one("ppa.ai.analysis", ondelete="restrict", readonly=True)
     active = fields.Boolean(default=True)
 
     @api.constrains("source_type", "source_message_id", "source_meeting_id")
