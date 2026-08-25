@@ -29,6 +29,8 @@ class PpaMessage(models.Model):
     ai_category = fields.Char()
     ai_importance = fields.Selection([("low", "Low"), ("normal", "Normal"), ("important", "Important"), ("critical", "Critical")])
     ai_confidence = fields.Float(digits=(3, 2))
+    ai_analysis_ids = fields.One2many("ppa.ai.analysis", "message_id", string="Analysis History")
+    latest_ai_analysis_id = fields.Many2one("ppa.ai.analysis", string="Latest AI Analysis", readonly=True)
     active = fields.Boolean(default=True)
 
     _source_external_unique = models.Constraint("UNIQUE(source_id, external_id)", "The external message ID must be unique per source.")
@@ -42,3 +44,11 @@ class PpaMessage(models.Model):
             if timestamp and (not conversation.last_message_at or timestamp > conversation.last_message_at):
                 conversation.last_message_at = timestamp
         return messages
+
+    def action_analyze_with_ai(self):
+        from ..services.intelligence_service import IntelligenceService
+        for message in self:
+            analysis = IntelligenceService(self.env).analyze_message(message)
+            if analysis.status == "completed":
+                message.latest_ai_analysis_id = analysis.id
+        return True

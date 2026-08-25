@@ -22,6 +22,7 @@ class PpaSuggestedAction(models.Model):
     source_meeting_id = fields.Many2one("ppa.meeting", ondelete="restrict", tracking=True)
     ai_confidence = fields.Float(digits=(3, 2))
     ai_reason = fields.Text()
+    ai_analysis_id = fields.Many2one("ppa.ai.analysis", ondelete="restrict", readonly=True)
     confirmed_action_type = fields.Selection([("activity", "Activity"), ("task", "Task")], readonly=True, tracking=True)
     confirmed_activity_id = fields.Many2one("mail.activity", readonly=True, ondelete="set null")
     confirmed_task_id = fields.Many2one("project.task", readonly=True, ondelete="set null")
