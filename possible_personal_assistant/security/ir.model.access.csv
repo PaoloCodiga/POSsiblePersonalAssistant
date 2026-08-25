@@ -1,0 +1,12 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_ppa_source_manager,ppa.source manager,model_ppa_source,possible_personal_assistant.group_ppa_manager,1,1,1,1
+access_ppa_conversation_user,ppa.conversation user,model_ppa_conversation,possible_personal_assistant.group_ppa_user,1,1,1,0
+access_ppa_conversation_manager,ppa.conversation manager,model_ppa_conversation,possible_personal_assistant.group_ppa_manager,1,1,1,1
+access_ppa_message_user,ppa.message user,model_ppa_message,possible_personal_assistant.group_ppa_user,1,1,1,0
+access_ppa_message_manager,ppa.message manager,model_ppa_message,possible_personal_assistant.group_ppa_manager,1,1,1,1
+access_ppa_meeting_user,ppa.meeting user,model_ppa_meeting,possible_personal_assistant.group_ppa_user,1,1,1,0
+access_ppa_meeting_manager,ppa.meeting manager,model_ppa_meeting,possible_personal_assistant.group_ppa_manager,1,1,1,1
+access_ppa_decision_user,ppa.decision user,model_ppa_decision,possible_personal_assistant.group_ppa_user,1,1,1,0
+access_ppa_decision_manager,ppa.decision manager,model_ppa_decision,possible_personal_assistant.group_ppa_manager,1,1,1,1
+access_ppa_suggested_action_user,ppa.suggested.action user,model_ppa_suggested_action,possible_personal_assistant.group_ppa_user,1,1,1,0
+access_ppa_suggested_action_manager,ppa.suggested.action manager,model_ppa_suggested_action,possible_personal_assistant.group_ppa_manager,1,1,1,1

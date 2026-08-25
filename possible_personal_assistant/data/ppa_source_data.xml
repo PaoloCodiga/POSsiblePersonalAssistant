@@ -1,0 +1,9 @@
+<odoo noupdate="1">
+    <record id="source_email" model="ppa.source"><field name="name">Email</field><field name="code">email</field></record>
+    <record id="source_microsoft_teams" model="ppa.source"><field name="name">Microsoft Teams</field><field name="code">microsoft_teams</field></record>
+    <record id="source_telegram" model="ppa.source"><field name="name">Telegram</field><field name="code">telegram</field></record>
+    <record id="source_whatsapp" model="ppa.source"><field name="name">WhatsApp</field><field name="code">whatsapp</field></record>
+    <record id="source_plaud" model="ppa.source"><field name="name">Plaud</field><field name="code">plaud</field></record>
+    <record id="source_manual" model="ppa.source"><field name="name">Manual</field><field name="code">manual</field></record>
+    <record id="source_unknown" model="ppa.source"><field name="name">Unknown</field><field name="code">unknown</field></record>
+</odoo>

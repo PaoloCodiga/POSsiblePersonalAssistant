@@ -1,0 +1,6 @@
+<odoo>
+    <record id="group_ppa_user" model="res.groups"><field name="name">PPA User</field></record>
+    <record id="group_ppa_manager" model="res.groups"><field name="name">PPA Manager</field><field name="implied_ids" eval="[(4, ref('possible_personal_assistant.group_ppa_user'))]"/></record>
+    <record id="rule_ppa_user_suggested_action" model="ir.rule"><field name="name">PPA actions: assigned or unassigned</field><field name="model_id" ref="model_ppa_suggested_action"/><field name="groups" eval="[(4, ref('possible_personal_assistant.group_ppa_user'))]"/><field name="domain_force">['|', ('suggested_user_id', '=', user.id), ('suggested_user_id', '=', False)]</field></record>
+    <record id="rule_ppa_manager_suggested_action" model="ir.rule"><field name="name">PPA actions: manager global</field><field name="model_id" ref="model_ppa_suggested_action"/><field name="groups" eval="[(4, ref('possible_personal_assistant.group_ppa_manager'))]"/><field name="domain_force">[(1, '=', 1)]</field></record>
+</odoo>

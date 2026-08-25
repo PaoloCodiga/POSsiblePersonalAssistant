@@ -1,0 +1,57 @@
+services:
+  ppa-db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: ${PPA_DB_NAME:-ppa}
+      POSTGRES_USER: ${PPA_DB_USER:-odoo}
+      POSTGRES_PASSWORD: ${PPA_DB_PASSWORD:-change-me}
+    ports:
+      - "${PPA_POSTGRES_PORT:-42005}:5432"
+    volumes:
+      - ppa-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks: [ppa-network]
+
+  ppa-odoo:
+    image: odoo:19.0
+    depends_on:
+      ppa-db:
+        condition: service_healthy
+    environment:
+      HOST: ppa-db
+      USER: ${PPA_DB_USER:-odoo}
+      PASSWORD: ${PPA_DB_PASSWORD:-change-me}
+      PPA_API_KEY: ${PPA_API_KEY:-change-me}
+    ports:
+      - "${PPA_ODOO_PORT:-42001}:8069"
+    volumes:
+      - ppa-odoo-data:/var/lib/odoo
+      - ./possible_personal_assistant:/mnt/extra-addons/possible_personal_assistant
+      - ./infrastructure/odoo/odoo.conf:/etc/odoo/odoo.conf:ro
+    networks: [ppa-network]
+
+  ppa-n8n:
+    image: n8nio/n8n:latest
+    environment:
+      N8N_BASIC_AUTH_ACTIVE: "true"
+      N8N_BASIC_AUTH_USER: ${N8N_USER:-admin}
+      N8N_BASIC_AUTH_PASSWORD: ${N8N_PASSWORD:-change-me}
+      N8N_ENCRYPTION_KEY: ${N8N_PASSWORD:-change-me}
+    ports:
+      - "${PPA_N8N_PORT:-42010}:5678"
+    volumes:
+      - ppa-n8n-data:/home/node/.n8n
+    networks: [ppa-network]
+
+volumes:
+  ppa-postgres-data:
+  ppa-odoo-data:
+  ppa-n8n-data:
+
+networks:
+  ppa-network:
+    name: ppa-network
