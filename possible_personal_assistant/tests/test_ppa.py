@@ -107,3 +107,24 @@ class TestPpa(TransactionCase):
             self.assertEqual(len(actions), expected[1])
             self.assertTrue(all(action.state == "to_confirm" and not action.confirmed_task_id and not action.confirmed_activity_id for action in actions))
             self.assertEqual(self.env["ppa.open.question"].search_count([("ai_analysis_id", "=", analysis.id)]), expected[2])
+
+    def test_meeting_reanalysis_and_failed_reanalysis_safety(self):
+        meeting = self.env["ppa.meeting"].create({"name": "Reanalysis", "source_id": self.source.id, "transcript": "meeting_full"})
+        service = IntelligenceService(self.env)
+        first = service.analyze_meeting(meeting)
+        first_summary = meeting.ai_summary
+        first_counts = (self.env["ppa.decision"].search_count([("ai_analysis_id", "=", first.id)]), self.env["ppa.suggested.action"].search_count([("ai_analysis_id", "=", first.id)]), self.env["ppa.open.question"].search_count([("ai_analysis_id", "=", first.id)]))
+        meeting.transcript = "meeting_no_actions"
+        second = service.analyze_meeting(meeting)
+        self.assertEqual(self.env["ppa.ai.analysis"].search_count([("meeting_id", "=", meeting.id)]), 2)
+        self.assertEqual(first.status, "completed")
+        self.assertEqual(second.status, "completed")
+        self.assertEqual(first_counts, (2, 3, 2))
+        self.assertNotEqual(meeting.ai_summary, first_summary)
+        meeting.transcript = "meeting_failure"
+        failed = service.analyze_meeting(meeting)
+        self.assertEqual(failed.status, "failed")
+        self.assertTrue(meeting.ai_processed)
+        self.assertEqual(self.env["ppa.decision"].search_count([("ai_analysis_id", "=", first.id)]), 2)
+        self.assertEqual(self.env["ppa.suggested.action"].search_count([("ai_analysis_id", "=", first.id)]), 3)
+        self.assertEqual(self.env["ppa.open.question"].search_count([("ai_analysis_id", "=", first.id)]), 2)
