@@ -14,3 +14,5 @@ access_ppa_ai_analysis_user,ppa.ai.analysis user,model_ppa_ai_analysis,possible_
 access_ppa_ai_analysis_manager,ppa.ai.analysis manager,model_ppa_ai_analysis,possible_personal_assistant.group_ppa_manager,1,1,1,1
 access_ppa_open_question_user,ppa.open.question user,model_ppa_open_question,possible_personal_assistant.group_ppa_user,1,1,1,0
 access_ppa_open_question_manager,ppa.open.question manager,model_ppa_open_question,possible_personal_assistant.group_ppa_manager,1,1,1,1
+access_ppa_ingestion_event_user,ppa.ingestion.event user,model_ppa_ingestion_event,possible_personal_assistant.group_ppa_user,1,0,0,0
+access_ppa_ingestion_event_manager,ppa.ingestion.event manager,model_ppa_ingestion_event,possible_personal_assistant.group_ppa_manager,1,1,1,1

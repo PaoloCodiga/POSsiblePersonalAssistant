@@ -14,5 +14,6 @@
  <menuitem id="ppa_communications_menu" name="Communications" parent="ppa_root_menu" sequence="40"/><menuitem id="ppa_conversations_menu" name="Conversations" parent="ppa_communications_menu" action="ppa_conversation_action"/><menuitem id="ppa_messages_menu" name="Messages" parent="ppa_communications_menu" action="ppa_message_action"/>
  <menuitem id="ppa_meetings_menu" name="Meetings" parent="ppa_root_menu" action="ppa_meeting_action" sequence="50"/>
  <menuitem id="ppa_intelligence_menu" name="Intelligence" parent="ppa_root_menu" sequence="60"/><menuitem id="ppa_ai_analyses_menu" name="AI Analyses" parent="ppa_intelligence_menu" action="ppa_ai_analysis_action"/>
+ <menuitem id="ppa_integrations_menu" name="Integrations" parent="ppa_root_menu" groups="possible_personal_assistant.group_ppa_manager" sequence="70"/><menuitem id="ppa_ingestion_events_menu" name="Ingestion Events" parent="ppa_integrations_menu" action="ppa_ingestion_event_action"/>
  <menuitem id="ppa_configuration_menu" name="Configuration" parent="ppa_root_menu" groups="possible_personal_assistant.group_ppa_manager" sequence="90"/><menuitem id="ppa_sources_menu" name="Sources" parent="ppa_configuration_menu" action="ppa_source_action"/>
 </odoo>

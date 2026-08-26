@@ -5,3 +5,6 @@ PPA is an Odoo 19 Community operational-backoffice foundation. Odoo is the syste
 Copy `.env.example` to `.env`, choose secrets, then run `./scripts/start.ps1`. Open `http://localhost:${PPA_ODOO_PORT}` (default `42001`), create/select database `ppa`, and install **POSsible Personal Assistant**. Use `./scripts/update-module.ps1` to upgrade and `./scripts/test-module.ps1` for Odoo tests. `./scripts/stop.ps1`, `./scripts/reset.ps1`, and `./scripts/logs.ps1` manage the stack.
 
 The ingestion API is conventional HTTP with JSON payloads and `X-PPA-API-Key` authentication; it does not use JSON-RPC. See [API documentation](docs/api.md). PostgreSQL at `localhost:${PPA_POSTGRES_PORT}` is development-only and must not be publicly exposed in production.
+# Plaud ingestion development support
+
+Phase 1.3 adds provider-neutral ingestion events and a development n8n workflow for Plaud AutoFlow/Zapier deliveries. See [Plaud ingestion](docs/plaud-ingestion.md). No Plaud private API, scraping, or Plaud credential storage is implemented.

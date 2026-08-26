@@ -6,3 +6,4 @@ from . import ppa_decision
 from . import ppa_suggested_action
 from . import ppa_ai_analysis
 from . import ppa_open_question
+from . import ppa_ingestion_event

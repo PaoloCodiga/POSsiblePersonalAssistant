@@ -45,6 +45,9 @@ services:
       N8N_BASIC_AUTH_USER: ${N8N_USER:-admin}
       N8N_BASIC_AUTH_PASSWORD: ${N8N_PASSWORD:-change-me}
       N8N_ENCRYPTION_KEY: ${N8N_PASSWORD:-change-me}
+      PPA_API_KEY: ${PPA_API_KEY:-change-me}
+      PPA_N8N_WEBHOOK_SECRET: ${PPA_N8N_WEBHOOK_SECRET:-}
+      PPA_INTERNAL_BASE_URL: ${PPA_INTERNAL_BASE_URL:-http://ppa-odoo:8069}
     ports:
       - "${PPA_N8N_PORT:-42010}:5678"
     volumes:

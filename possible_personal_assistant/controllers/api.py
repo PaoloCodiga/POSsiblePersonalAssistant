@@ -8,6 +8,8 @@ from werkzeug.exceptions import BadRequest
 from odoo import fields, http
 from odoo.http import request
 
+from ..services.ingestion_service import IngestionService
+
 _logger = logging.getLogger(__name__)
 
 
@@ -94,6 +96,58 @@ class PpaApiController(http.Controller):
             return self._json_response({"id": existing.id, "status": "existing"})
         record = Meeting.create({"name": payload.get("name") or payload["external_id"], "source_id": source.id, "external_id": payload["external_id"], "started_at": fields.Datetime.to_datetime(payload["started_at"]) if payload.get("started_at") else False, "ended_at": fields.Datetime.to_datetime(payload["ended_at"]) if payload.get("ended_at") else False, "summary": payload.get("summary"), "transcript": payload.get("transcript"), "raw_payload_json": json.dumps(payload.get("raw_payload", {}))})
         return self._json_response({"id": record.id, "status": "created"}, status=201)
+
+    @http.route("/ppa/api/ingestion/events", type="http", auth="none", methods=["POST"], csrf=False)
+    def create_ingestion_event(self, **kwargs):
+        unauthorized = self._require_authorization()
+        if unauthorized:
+            return unauthorized
+        payload, error = self._payload()
+        if error:
+            return error
+        if not payload.get("source") or not payload.get("external_event_id"):
+            return self._json_response(
+                {"error": "source and external_event_id are required."}, status=400
+            )
+        # The API key authorizes a server-to-server ingestion request without an Odoo session.
+        event, created = IngestionService(request.env["ppa.ingestion.event"].sudo().env).ingest_event(payload)
+        if event.status == "failed":
+            return self._json_response({"id": event.id, "status": "failed"}, status=400)
+        return self._json_response(
+            {"id": event.id, "meeting_id": event.meeting_id.id, "status": "created" if created else "existing"},
+            status=201 if created else 200,
+        )
+
+    @http.route("/ppa/api/integrations/plaud", type="http", auth="none", methods=["POST"], csrf=False)
+    def create_plaud_event(self, **kwargs):
+        unauthorized = self._require_authorization()
+        if unauthorized:
+            return unauthorized
+        payload, error = self._payload()
+        if error:
+            return error
+        if not payload.get("event_id") or not payload.get("recording_id"):
+            return self._json_response({"error": "event_id and recording_id are required."}, status=400)
+        event_types = {
+            "transcript_generated": "meeting_transcript_ready",
+            "summary_generated": "meeting_summary_ready",
+            "manual_import": "manual_import",
+        }
+        if payload.get("event_type") not in event_types:
+            return self._json_response({"error": "Invalid Plaud event_type."}, status=400)
+        normalized = {
+            "source": "plaud", "external_id": payload["recording_id"],
+            "external_event_id": payload["event_id"],
+            "event_type": event_types[payload["event_type"]],
+            "name": payload.get("title"), "started_at": payload.get("started_at"),
+            "ended_at": payload.get("ended_at"), "summary": payload.get("summary"),
+            "transcript": payload.get("transcript"), "participants": payload.get("participants", []),
+            "source_url": payload.get("source_url"), "raw_payload": payload.get("raw_payload", payload),
+        }
+        event, created = IngestionService(request.env["ppa.ingestion.event"].sudo().env).ingest_event(normalized)
+        if event.status == "failed":
+            return self._json_response({"status": "failed", "event_id": event.id}, status=400)
+        return self._json_response({"status": "created" if created else "duplicate", "meeting_id": event.meeting_id.id, "event_id": event.id}, status=201 if created else 200)
 
     @http.route("/ppa/api/suggested-actions", type="http", auth="none", methods=["POST"], csrf=False)
     def create_suggested_action(self, **kwargs):
