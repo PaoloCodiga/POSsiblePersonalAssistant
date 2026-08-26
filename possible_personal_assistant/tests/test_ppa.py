@@ -1,7 +1,10 @@
+from unittest.mock import patch
+
+from odoo import fields
 from odoo.exceptions import UserError
 from odoo.tests.common import TransactionCase
-from odoo import fields
 
+from ..services.fake_provider import FakeProvider
 from ..services.intelligence_service import IntelligenceService
 from ..services.owner_resolver import resolve_user
 
@@ -128,3 +131,103 @@ class TestPpa(TransactionCase):
         self.assertEqual(self.env["ppa.decision"].search_count([("ai_analysis_id", "=", first.id)]), 2)
         self.assertEqual(self.env["ppa.suggested.action"].search_count([("ai_analysis_id", "=", first.id)]), 3)
         self.assertEqual(self.env["ppa.open.question"].search_count([("ai_analysis_id", "=", first.id)]), 2)
+
+    def test_meeting_generated_owner_resolution_matrix(self):
+        scenarios = [
+            (
+                "unique",
+                "  Owner   Unique ",
+                {"name": "Owner Unique", "login": "owner.unique@test.invalid"},
+                None,
+                True,
+            ),
+            (
+                "ambiguous",
+                "Owner Ambiguous",
+                {"name": "Owner Ambiguous", "login": "owner.ambiguous.1@test.invalid"},
+                {"name": " owner  ambiguous ", "login": "owner.ambiguous.2@test.invalid"},
+                False,
+            ),
+            ("missing", "Owner Missing", None, None, False),
+            (
+                "inactive",
+                "Owner Inactive",
+                {
+                    "name": "Owner Inactive",
+                    "login": "owner.inactive@test.invalid",
+                    "active": False,
+                },
+                None,
+                False,
+            ),
+        ]
+
+        for label, owner_text, first_user, second_user, expected in scenarios:
+            user = (
+                self.env["res.users"].create(first_user)
+                if first_user
+                else self.env["res.users"]
+            )
+            if second_user:
+                self.env["res.users"].create(second_user)
+
+            payload = {
+                "summary": "Owner resolution test",
+                "importance": "normal",
+                "confidence": 0.9,
+                "decisions": [
+                    {
+                        "title": "Decision",
+                        "responsible_user": owner_text,
+                        "confidence": 0.9,
+                    }
+                ],
+                "suggested_actions": [
+                    {
+                        "title": "Action",
+                        "suggested_user": owner_text,
+                        "priority": "normal",
+                        "confidence": 0.9,
+                    }
+                ],
+                "open_questions": [
+                    {
+                        "question": "Question",
+                        "owner": owner_text,
+                        "importance": "normal",
+                        "confidence": 0.9,
+                    }
+                ],
+            }
+            meeting = self.env["ppa.meeting"].create({"name": "Owner %s" % label, "source_id": self.source.id})
+            task_count = self.env["project.task"].search_count([])
+            activity_count = self.env["mail.activity"].search_count([])
+            with patch.object(FakeProvider, "analyze_meeting", return_value=payload):
+                analysis = IntelligenceService(self.env).analyze_meeting(meeting)
+
+            self.assertEqual(analysis.status, "completed", "Meeting analysis %s" % label)
+            action = self.env["ppa.suggested.action"].search([("ai_analysis_id", "=", analysis.id)])
+            decision = self.env["ppa.decision"].search([("ai_analysis_id", "=", analysis.id)])
+            question = self.env["ppa.open.question"].search([("ai_analysis_id", "=", analysis.id)])
+
+            self.assertEqual(len(action), 1, "Suggested Action %s" % label)
+            self.assertEqual(len(decision), 1, "Decision %s" % label)
+            self.assertEqual(len(question), 1, "Open Question %s" % label)
+
+            self.assertEqual(bool(action.suggested_user_id), expected, "Suggested Action %s" % label)
+            self.assertEqual(bool(decision.responsible_user_id), expected, "Decision %s" % label)
+            self.assertEqual(bool(question.suggested_user_id), expected, "Open Question %s" % label)
+            self.assertEqual(action.suggested_user_text, owner_text, "Suggested Action raw owner %s" % label)
+            self.assertEqual(decision.responsible_user_text, owner_text, "Decision raw owner %s" % label)
+            self.assertEqual(question.suggested_user_text, owner_text, "Open Question raw owner %s" % label)
+
+            if expected:
+                self.assertEqual(action.suggested_user_id, user, "Suggested Action %s" % label)
+                self.assertEqual(decision.responsible_user_id, user, "Decision %s" % label)
+                self.assertEqual(question.suggested_user_id, user, "Open Question %s" % label)
+
+            self.assertEqual(action.state, "to_confirm", "Suggested Action state %s" % label)
+            self.assertFalse(action.confirmed_task_id, "Suggested Action task %s" % label)
+            self.assertFalse(action.confirmed_activity_id, "Suggested Action activity %s" % label)
+            self.assertEqual(self.env["project.task"].search_count([]), task_count, "Task count %s" % label)
+            self.assertEqual(self.env["mail.activity"].search_count([]), activity_count, "Activity count %s" % label)
