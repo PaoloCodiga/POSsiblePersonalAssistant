@@ -1,3 +1,4 @@
+import json
 from unittest.mock import patch
 
 from odoo import fields
@@ -308,3 +309,23 @@ class TestPpa(TransactionCase):
         self.assertFalse(self.env["ppa.ai.analysis"].search_count([
             ("meeting_id", "=", event.meeting_id.id)
         ]))
+
+    def test_ingestion_raw_payload_scrubs_credentials(self):
+        event, created = IngestionService(self.env).ingest_event({
+            "source": "plaud", "external_id": "scrubbed-recording-1",
+            "external_event_id": "scrubbed-event-1",
+            "event_type": "meeting_transcript_ready",
+            "raw_payload": {
+                "authorization": "regression-secret",
+                "x-api-key": "regression-secret",
+                "api_key": "regression-secret",
+                "token": "regression-secret",
+                "access_token": "regression-secret",
+                "headers": {"X-PPA-API-Key": "regression-secret"},
+                "nested": {"x-api-key": "regression-secret", "safe": "retained"},
+            },
+        })
+        self.assertTrue(created)
+        stored = json.loads(event.raw_payload_json)
+        self.assertEqual(stored, {"nested": {"safe": "retained"}})
+        self.assertNotIn("regression-secret", event.raw_payload_json)
