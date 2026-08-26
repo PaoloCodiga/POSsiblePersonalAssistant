@@ -3,6 +3,7 @@ from odoo.tests.common import TransactionCase
 from odoo import fields
 
 from ..services.intelligence_service import IntelligenceService
+from ..services.owner_resolver import resolve_user
 
 
 class TestPpa(TransactionCase):
@@ -78,3 +79,31 @@ class TestPpa(TransactionCase):
         invalid_analysis = IntelligenceService(self.env).analyze_meeting(invalid)
         self.assertEqual(invalid_analysis.status, "failed")
         self.assertFalse(invalid.ai_processed)
+
+    def test_owner_resolver_is_conservative(self):
+        unique = self.env["res.users"].create({"name": "Waheed Unique", "login": "waheed.unique@test.invalid"})
+        self.assertEqual(resolve_user(self.env, "  waheed   unique  "), unique)
+        self.assertFalse(resolve_user(self.env, "Nobody"))
+        first = self.env["res.users"].create({"name": "Ambiguous Owner", "login": "ambiguous.1@test.invalid"})
+        second = self.env["res.users"].create({"name": " ambiguous  owner ", "login": "ambiguous.2@test.invalid"})
+        self.assertTrue(first and second)
+        self.assertFalse(resolve_user(self.env, "AMBIGUOUS OWNER"))
+        inactive = self.env["res.users"].create({"name": "Inactive Owner", "login": "inactive.owner@test.invalid", "active": False})
+        self.assertTrue(inactive)
+        self.assertFalse(resolve_user(self.env, "inactive owner"))
+
+    def test_fake_meeting_scenario_matrix(self):
+        scenarios = {"meeting_decisions_only": (1, 0, 0), "meeting_actions_only": (0, 1, 0), "meeting_no_actions": (0, 0, 0), "meeting_failure": (0, 0, 0)}
+        for scenario, expected in scenarios.items():
+            meeting = self.env["ppa.meeting"].create({"name": scenario, "source_id": self.source.id, "transcript": scenario})
+            analysis = IntelligenceService(self.env).analyze_meeting(meeting)
+            if scenario == "meeting_failure":
+                self.assertEqual(analysis.status, "failed")
+                self.assertFalse(meeting.ai_processed)
+            else:
+                self.assertEqual(analysis.status, "completed")
+            self.assertEqual(self.env["ppa.decision"].search_count([("ai_analysis_id", "=", analysis.id)]), expected[0])
+            actions = self.env["ppa.suggested.action"].search([("ai_analysis_id", "=", analysis.id)])
+            self.assertEqual(len(actions), expected[1])
+            self.assertTrue(all(action.state == "to_confirm" and not action.confirmed_task_id and not action.confirmed_activity_id for action in actions))
+            self.assertEqual(self.env["ppa.open.question"].search_count([("ai_analysis_id", "=", analysis.id)]), expected[2])
