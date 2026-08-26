@@ -19,6 +19,7 @@
         "views/ppa_suggested_action_views.xml",
         "views/ppa_ai_analysis_views.xml",
         "views/ppa_open_question_views.xml",
+        "views/ppa_ingestion_event_views.xml",
         "views/ppa_menu.xml",
     ],
     "demo": ["demo/ppa_demo.xml"],

@@ -27,3 +27,8 @@ Invoke-RestMethod "$baseUrl/ppa/api/suggested-actions" -Method Post -Headers $he
 curl -H 'X-PPA-API-Key: <your-api-key>' http://localhost:42001/ppa/api/health
 curl -X POST http://localhost:42001/ppa/api/messages -H 'X-PPA-API-Key: <your-api-key>' -H 'Content-Type: application/json' -d '{"source":"email","external_id":"example-message-001"}'
 ```
+# Ingestion event endpoint
+
+`POST /ppa/api/ingestion/events` is conventional HTTP JSON, protected by `X-PPA-API-Key`. It creates an audit event and creates or merges a normalized Meeting. A new event returns `201`; a replay of the same source and external event ID returns `200` with `status: existing`. Invalid events return `400` and retain a failed audit record when their source and event ID are available.
+
+`POST /ppa/api/integrations/plaud` accepts Plaud-normalized fields `event_id`, `event_type`, and `recording_id`. It maps `transcript_generated` and `summary_generated` to the generic ingestion service. The recording identifier is the Meeting external ID; event IDs are idempotency keys.

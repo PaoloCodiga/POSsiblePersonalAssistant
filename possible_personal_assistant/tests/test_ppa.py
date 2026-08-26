@@ -6,6 +6,7 @@ from odoo.tests.common import TransactionCase
 
 from ..services.fake_provider import FakeProvider
 from ..services.intelligence_service import IntelligenceService
+from ..services.ingestion_service import IngestionService
 from ..services.owner_resolver import resolve_user
 
 
@@ -231,3 +232,79 @@ class TestPpa(TransactionCase):
             self.assertFalse(action.confirmed_activity_id, "Suggested Action activity %s" % label)
             self.assertEqual(self.env["project.task"].search_count([]), task_count, "Task count %s" % label)
             self.assertEqual(self.env["mail.activity"].search_count([]), activity_count, "Activity count %s" % label)
+
+    def test_plaud_ingestion_idempotency_and_merge(self):
+        service = IngestionService(self.env)
+        transcript_event = {
+            "source": "plaud", "external_id": "recording-test-1",
+            "external_event_id": "event-transcript-1",
+            "event_type": "meeting_transcript_ready", "name": "Plaud Test",
+            "transcript": "Useful transcript", "participants": [{"name": "Unknown Speaker"}],
+        }
+        event, created = service.ingest_event(transcript_event)
+        self.assertTrue(created)
+        self.assertEqual(event.status, "completed")
+        self.assertEqual(event.meeting_id.external_id, "recording-test-1")
+        self.assertEqual(event.meeting_id.transcript, "<p>Useful transcript</p>")
+        duplicate, created = service.ingest_event(transcript_event)
+        self.assertFalse(created)
+        self.assertEqual(duplicate, event)
+        summary_event = dict(transcript_event, external_event_id="event-summary-1",
+                             event_type="meeting_summary_ready", summary="Useful summary",
+                             transcript="")
+        summary_event, created = service.ingest_event(summary_event)
+        self.assertTrue(created)
+        self.assertEqual(summary_event.meeting_id, event.meeting_id)
+        self.assertEqual(event.meeting_id.summary, "<p>Useful summary</p>")
+        self.assertEqual(event.meeting_id.transcript, "<p>Useful transcript</p>")
+        self.assertFalse(self.env["ppa.ai.analysis"].search_count([
+            ("meeting_id", "=", event.meeting_id.id)
+        ]))
+        self.assertEqual(self.env["ppa.ingestion.event"].search_count([
+            ("external_object_id", "=", "recording-test-1")]), 2)
+
+    def test_plaud_ingestion_failure_retry_and_auto_analysis(self):
+        service = IngestionService(self.env)
+        failed, created = service.ingest_event({
+            "source": "plaud", "external_event_id": "event-invalid-1",
+            "event_type": "meeting_ready",
+        })
+        self.assertTrue(created)
+        self.assertEqual(failed.status, "failed")
+        self.assertTrue(failed.error_message)
+        failed.normalized_payload_json = '{"source":"plaud","external_id":"retry-1","external_event_id":"event-invalid-1","event_type":"meeting_ready","name":"Retry","transcript":"meeting_no_actions"}'
+        failed.action_retry()
+        self.assertEqual(failed.status, "completed")
+        self.assertEqual(failed.retry_count, 1)
+        tasks = self.env["project.task"].search_count([])
+        activities = self.env["mail.activity"].search_count([])
+        event, created = service.ingest_event({
+            "source": "plaud", "external_id": "ready-1",
+            "external_event_id": "event-ready-1", "event_type": "meeting_ready",
+            "transcript": "meeting_full",
+        })
+        self.assertTrue(created)
+        analyses = self.env["ppa.ai.analysis"].search([("meeting_id", "=", event.meeting_id.id)])
+        self.assertFalse(analyses)
+        self.assertEqual(self.env["project.task"].search_count([]), tasks)
+        self.assertEqual(self.env["mail.activity"].search_count([]), activities)
+        duplicate, created = service.ingest_event({
+            "source": "plaud", "external_id": "ready-1", "external_event_id": "event-ready-1",
+            "event_type": "meeting_ready", "transcript": "meeting_full",
+        })
+        self.assertFalse(created)
+        self.assertEqual(duplicate, event)
+        self.assertFalse(self.env["ppa.ai.analysis"].search_count([("meeting_id", "=", event.meeting_id.id)]))
+
+    def test_plaud_partial_event_never_auto_analyzes(self):
+        service = IngestionService(self.env)
+        event, created = service.ingest_event({
+            "source": "plaud", "external_id": "partial-1",
+            "external_event_id": "event-partial-1",
+            "event_type": "meeting_transcript_ready", "transcript": "meeting_full",
+        })
+        self.assertTrue(created)
+        self.assertEqual(event.status, "completed")
+        self.assertFalse(self.env["ppa.ai.analysis"].search_count([
+            ("meeting_id", "=", event.meeting_id.id)
+        ]))

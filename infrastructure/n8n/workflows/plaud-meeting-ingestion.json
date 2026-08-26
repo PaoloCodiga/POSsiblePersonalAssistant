@@ -1,0 +1,21 @@
+{
+  "name": "PPA Plaud Meeting Ingestion (Development)",
+  "nodes": [
+    {
+      "parameters": {"httpMethod": "POST", "path": "ppa/plaud", "responseMode": "lastNode"},
+      "id": "webhook", "name": "Plaud Webhook", "type": "n8n-nodes-base.webhook", "typeVersion": 2, "position": [260, 300]
+    },
+    {
+      "parameters": {"jsCode": "const secret = $env.PPA_N8N_WEBHOOK_SECRET;\nif (secret && $json.headers?.['x-ppa-n8n-webhook-secret'] !== secret) throw new Error('Unauthorized Plaud webhook');\nconst body = $json.body || {};\nif (!body.recording_id || !body.event_id) throw new Error('recording_id and event_id are required');\nreturn [{json: {event_id: body.event_id, event_type: body.event_type, recording_id: body.recording_id, title: body.title, started_at: body.started_at, ended_at: body.ended_at, summary: body.summary, transcript: body.transcript, participants: body.participants || [], source_url: body.source_url, raw_payload: body}}];"},
+      "id": "normalize", "name": "Validate and Normalize", "type": "n8n-nodes-base.code", "typeVersion": 2, "position": [500, 300]
+    },
+    {
+      "parameters": {"method": "POST", "url": "={{ $env.PPA_INTERNAL_BASE_URL + '/ppa/api/integrations/plaud' }}", "sendHeaders": true, "headerParameters": {"parameters": [{"name": "X-PPA-API-Key", "value": "={{ $env.PPA_API_KEY }}"}]}, "sendBody": true, "contentType": "json", "jsonBody": "={{ JSON.stringify($json) }}"},
+      "id": "odoo", "name": "Create PPA Ingestion Event", "type": "n8n-nodes-base.httpRequest", "typeVersion": 4.2, "position": [760, 300]
+    }
+  ],
+  "connections": {"Plaud Webhook": {"main": [[{"node": "Validate and Normalize", "type": "main", "index": 0}]]}, "Validate and Normalize": {"main": [[{"node": "Create PPA Ingestion Event", "type": "main", "index": 0}]]}},
+  "active": false,
+  "settings": {},
+  "versionId": "development"
+}
