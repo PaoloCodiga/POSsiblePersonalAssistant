@@ -21,6 +21,12 @@ class FakeProvider(AiProvider):
             raise RuntimeError("Fake meeting provider failure")
         if "meeting_no_actions" in text:
             return {"summary": "General company update.", "importance": "normal", "confidence": 0.9, "decisions": [], "suggested_actions": [], "open_questions": []}
+        if "meeting_invalid" in text:
+            return {"summary": "Invalid", "importance": "unknown", "confidence": 2, "decisions": [], "suggested_actions": [], "open_questions": []}
+        if "meeting_decisions_only" in text:
+            return {"summary": "Decision meeting.", "importance": "important", "confidence": 0.9, "decisions": [{"title": "Approve plan", "confidence": 0.9}], "suggested_actions": [], "open_questions": []}
+        if "meeting_actions_only" in text:
+            return {"summary": "Action meeting.", "importance": "important", "confidence": 0.9, "decisions": [], "suggested_actions": [{"title": "Prepare package", "priority": "important", "confidence": 0.9}], "open_questions": []}
         decisions = [{"title": "Approve deployment plan", "description": "The deployment plan was approved.", "confidence": 0.9, "reason": "Explicitly approved."}, {"title": "Select certification path", "description": "Certification path was agreed.", "confidence": 0.88, "reason": "Explicit agreement."}]
         actions = [{"title": "Prepare deployment", "priority": "important", "confidence": 0.9, "reason": "Assigned follow-up."}] * 3
         questions = [{"question": "Who confirms certification timing?", "importance": "important", "confidence": 0.8}, {"question": "Which deployment window is preferred?", "importance": "normal", "confidence": 0.8}]

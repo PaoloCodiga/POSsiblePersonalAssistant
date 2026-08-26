@@ -14,6 +14,7 @@ class PpaDecision(models.Model):
     company_id = fields.Many2one("res.company", default=lambda self: self.env.company, tracking=True)
     project_id = fields.Many2one("project.project", tracking=True)
     responsible_user_id = fields.Many2one("res.users", tracking=True)
+    responsible_user_text = fields.Char()
     source_type = fields.Selection([("message", "Message"), ("meeting", "Meeting"), ("manual", "Manual")], default="manual", required=True, tracking=True)
     source_message_id = fields.Many2one("ppa.message", ondelete="restrict", tracking=True)
     source_meeting_id = fields.Many2one("ppa.meeting", ondelete="restrict", tracking=True)

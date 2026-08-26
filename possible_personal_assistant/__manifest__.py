@@ -1,6 +1,7 @@
 {
     "name": "POSsible Personal Assistant",
     "summary": "Provider-independent operational backoffice foundation",
+    "author": "POSsible",
     "version": "19.0.1.0.0",
     "category": "Productivity",
     "license": "LGPL-3",

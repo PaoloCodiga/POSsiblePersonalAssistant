@@ -11,6 +11,7 @@ class PpaSuggestedAction(models.Model):
     name = fields.Char(required=True, tracking=True)
     description = fields.Html()
     suggested_user_id = fields.Many2one("res.users", string="Assigned User", default=lambda self: self.env.user, tracking=True)
+    suggested_user_text = fields.Char()
     partner_id = fields.Many2one("res.partner", string="Customer", tracking=True)
     company_id = fields.Many2one("res.company", default=lambda self: self.env.company, tracking=True)
     project_id = fields.Many2one("project.project", tracking=True)
