@@ -10,8 +10,9 @@
  <menuitem id="ppa_to_confirm_menu" name="To Confirm" parent="ppa_my_work_menu" action="ppa_to_confirm_action"/>
  <menuitem id="ppa_overdue_menu" name="Overdue" parent="ppa_my_work_menu" action="ppa_overdue_action"/>
  <menuitem id="ppa_team_menu" name="Team" parent="ppa_root_menu" sequence="20"/><menuitem id="ppa_team_actions_menu" name="Team To-Do" parent="ppa_team_menu" action="ppa_suggested_action_action"/>
- <menuitem id="ppa_global_menu" name="Global" parent="ppa_root_menu" sequence="30"/><menuitem id="ppa_actions_menu" name="All Actions" parent="ppa_global_menu" action="ppa_suggested_action_action"/><menuitem id="ppa_decisions_menu" name="Decisions" parent="ppa_global_menu" action="ppa_decision_action"/>
+ <menuitem id="ppa_global_menu" name="Global" parent="ppa_root_menu" sequence="30"/><menuitem id="ppa_actions_menu" name="All Actions" parent="ppa_global_menu" action="ppa_suggested_action_action"/><menuitem id="ppa_decisions_menu" name="Decisions" parent="ppa_global_menu" action="ppa_decision_action"/><menuitem id="ppa_open_questions_menu" name="Open Questions" parent="ppa_global_menu" action="ppa_open_question_action"/>
  <menuitem id="ppa_communications_menu" name="Communications" parent="ppa_root_menu" sequence="40"/><menuitem id="ppa_conversations_menu" name="Conversations" parent="ppa_communications_menu" action="ppa_conversation_action"/><menuitem id="ppa_messages_menu" name="Messages" parent="ppa_communications_menu" action="ppa_message_action"/>
  <menuitem id="ppa_meetings_menu" name="Meetings" parent="ppa_root_menu" action="ppa_meeting_action" sequence="50"/>
+ <menuitem id="ppa_intelligence_menu" name="Intelligence" parent="ppa_root_menu" sequence="60"/><menuitem id="ppa_ai_analyses_menu" name="AI Analyses" parent="ppa_intelligence_menu" action="ppa_ai_analysis_action"/>
  <menuitem id="ppa_configuration_menu" name="Configuration" parent="ppa_root_menu" groups="possible_personal_assistant.group_ppa_manager" sequence="90"/><menuitem id="ppa_sources_menu" name="Sources" parent="ppa_configuration_menu" action="ppa_source_action"/>
 </odoo>

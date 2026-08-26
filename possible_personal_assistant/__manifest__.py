@@ -1,6 +1,7 @@
 {
     "name": "POSsible Personal Assistant",
     "summary": "Provider-independent operational backoffice foundation",
+    "author": "POSsible",
     "version": "19.0.1.0.0",
     "category": "Productivity",
     "license": "LGPL-3",
@@ -16,6 +17,8 @@
         "views/ppa_meeting_views.xml",
         "views/ppa_decision_views.xml",
         "views/ppa_suggested_action_views.xml",
+        "views/ppa_ai_analysis_views.xml",
+        "views/ppa_open_question_views.xml",
         "views/ppa_menu.xml",
     ],
     "demo": ["demo/ppa_demo.xml"],

@@ -10,3 +10,7 @@ access_ppa_decision_user,ppa.decision user,model_ppa_decision,possible_personal_
 access_ppa_decision_manager,ppa.decision manager,model_ppa_decision,possible_personal_assistant.group_ppa_manager,1,1,1,1
 access_ppa_suggested_action_user,ppa.suggested.action user,model_ppa_suggested_action,possible_personal_assistant.group_ppa_user,1,1,1,0
 access_ppa_suggested_action_manager,ppa.suggested.action manager,model_ppa_suggested_action,possible_personal_assistant.group_ppa_manager,1,1,1,1
+access_ppa_ai_analysis_user,ppa.ai.analysis user,model_ppa_ai_analysis,possible_personal_assistant.group_ppa_user,1,0,0,0
+access_ppa_ai_analysis_manager,ppa.ai.analysis manager,model_ppa_ai_analysis,possible_personal_assistant.group_ppa_manager,1,1,1,1
+access_ppa_open_question_user,ppa.open.question user,model_ppa_open_question,possible_personal_assistant.group_ppa_user,1,1,1,0
+access_ppa_open_question_manager,ppa.open.question manager,model_ppa_open_question,possible_personal_assistant.group_ppa_manager,1,1,1,1
