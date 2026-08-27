@@ -1,4 +1,5 @@
 import json
+import os
 from unittest.mock import patch
 
 from odoo import fields
@@ -329,3 +330,67 @@ class TestPpa(TransactionCase):
         stored = json.loads(event.raw_payload_json)
         self.assertEqual(stored, {"nested": {"safe": "retained"}})
         self.assertNotIn("regression-secret", event.raw_payload_json)
+
+    def test_plaud_summary_first_merges_transcript_and_participants(self):
+        service = IngestionService(self.env)
+        summary, created = service.ingest_event({
+            "source": "plaud", "external_id": "recording-summary-first",
+            "external_event_id": "event-summary-first", "event_type": "meeting_summary_ready",
+            "name": "Plaud summary first", "summary": "Useful summary",
+            "participants": [{"name": "Alex"}],
+        })
+        self.assertTrue(created)
+        transcript, created = service.ingest_event({
+            "source": "plaud", "external_id": "recording-summary-first",
+            "external_event_id": "event-transcript-second", "event_type": "meeting_transcript_ready",
+            "transcript": "Useful transcript", "summary": "",
+            "participants": [{"name": "Blair"}],
+        })
+        self.assertTrue(created)
+        meeting = transcript.meeting_id
+        self.assertEqual(meeting, summary.meeting_id)
+        self.assertEqual(meeting.summary, "<p>Useful summary</p>")
+        self.assertEqual(meeting.transcript, "<p>Useful transcript</p>")
+        self.assertEqual(json.loads(meeting.participant_names_json), ["Alex", "Blair"])
+        duplicate, created = service.ingest_event({
+            "source": "plaud", "external_id": "recording-summary-first",
+            "external_event_id": "event-summary-first", "event_type": "meeting_summary_ready",
+            "summary": "Useful summary",
+        })
+        self.assertFalse(created)
+        self.assertEqual(duplicate, summary)
+
+    def test_plaud_auto_analysis_is_eligible_and_idempotent(self):
+        service = IngestionService(self.env)
+        tasks = self.env["project.task"].search_count([])
+        activities = self.env["mail.activity"].search_count([])
+        with patch.dict(os.environ, {"PPA_AUTO_ANALYZE_MEETINGS": "true"}):
+            partial, created = service.ingest_event({
+                "source": "plaud", "external_id": "auto-partial-1",
+                "external_event_id": "auto-partial-event-1",
+                "event_type": "meeting_transcript_ready", "transcript": "meeting_full",
+            })
+            self.assertTrue(created)
+            self.assertFalse(self.env["ppa.ai.analysis"].search_count([
+                ("meeting_id", "=", partial.meeting_id.id)
+            ]))
+            event, created = service.ingest_event({
+                "source": "plaud", "external_id": "auto-ready-1",
+                "external_event_id": "auto-ready-event-1", "event_type": "meeting_ready",
+                "transcript": "meeting_full",
+            })
+            self.assertTrue(created)
+            analyses = self.env["ppa.ai.analysis"].search([("meeting_id", "=", event.meeting_id.id)])
+            self.assertEqual(len(analyses), 1)
+            duplicate, created = service.ingest_event({
+                "source": "plaud", "external_id": "auto-ready-1",
+                "external_event_id": "auto-ready-event-1", "event_type": "meeting_ready",
+                "transcript": "meeting_full",
+            })
+        self.assertFalse(created)
+        self.assertEqual(duplicate, event)
+        self.assertEqual(self.env["ppa.ai.analysis"].search_count([
+            ("meeting_id", "=", event.meeting_id.id)
+        ]), 1)
+        self.assertEqual(self.env["project.task"].search_count([]), tasks)
+        self.assertEqual(self.env["mail.activity"].search_count([]), activities)

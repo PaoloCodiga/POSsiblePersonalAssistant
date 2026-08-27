@@ -30,6 +30,7 @@ services:
       PPA_OPENAI_API_KEY: ${PPA_OPENAI_API_KEY:-}
       PPA_OPENAI_MODEL: ${PPA_OPENAI_MODEL:-}
       PPA_AI_TIMEOUT_SECONDS: ${PPA_AI_TIMEOUT_SECONDS:-60}
+      PPA_AUTO_ANALYZE_MEETINGS: ${PPA_AUTO_ANALYZE_MEETINGS:-false}
     ports:
       - "${PPA_ODOO_PORT:-42001}:8069"
     volumes:
@@ -45,13 +46,15 @@ services:
       N8N_BASIC_AUTH_USER: ${N8N_USER:-admin}
       N8N_BASIC_AUTH_PASSWORD: ${N8N_PASSWORD:-change-me}
       N8N_ENCRYPTION_KEY: ${N8N_PASSWORD:-change-me}
+      N8N_BLOCK_ENV_ACCESS_IN_NODE: "false"
       PPA_API_KEY: ${PPA_API_KEY:-change-me}
-      PPA_N8N_WEBHOOK_SECRET: ${PPA_N8N_WEBHOOK_SECRET:-}
-      PPA_INTERNAL_BASE_URL: ${PPA_INTERNAL_BASE_URL:-http://ppa-odoo:8069}
+      PPA_PLAUD_WEBHOOK_KEY: ${PPA_PLAUD_WEBHOOK_KEY:-change-me}
+      PPA_ODOO_INTERNAL_URL: ${PPA_ODOO_INTERNAL_URL:-http://ppa-odoo:8069}
     ports:
       - "${PPA_N8N_PORT:-42010}:5678"
     volumes:
       - ppa-n8n-data:/home/node/.n8n
+      - ./infrastructure/n8n:/opt/ppa-n8n:ro
     networks: [ppa-network]
 
 volumes:

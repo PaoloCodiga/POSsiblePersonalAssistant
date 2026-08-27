@@ -7,4 +7,4 @@ Copy `.env.example` to `.env`, choose secrets, then run `./scripts/start.ps1`. O
 The ingestion API is conventional HTTP with JSON payloads and `X-PPA-API-Key` authentication; it does not use JSON-RPC. See [API documentation](docs/api.md). PostgreSQL at `localhost:${PPA_POSTGRES_PORT}` is development-only and must not be publicly exposed in production.
 # Plaud ingestion development support
 
-Phase 1.3 adds provider-neutral ingestion events and a development n8n workflow for Plaud AutoFlow/Zapier deliveries. See [Plaud ingestion](docs/plaud-ingestion.md). No Plaud private API, scraping, or Plaud credential storage is implemented.
+Phase 1.4 provides a Plaud → Zapier → n8n → PPA ingestion mapping workflow. See [Plaud ingestion](docs/plaud-ingestion.md). No Plaud private API, scraping, or Plaud credential storage is implemented.
