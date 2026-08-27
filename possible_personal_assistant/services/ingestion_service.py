@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 import re
 
 from odoo import fields
@@ -50,11 +51,32 @@ class IngestionService:
             meeting = self._upsert_meeting(event, normalized)
             event.write({"status": "completed", "meeting_id": meeting.id,
                          "processed_at": fields.Datetime.now(), "error_message": False})
+            self._auto_analyze_meeting(event, meeting)
         except Exception as error:
             _logger.warning("PPA ingestion event %s failed: %s", event.id, error)
             event.write({"status": "failed", "error_message": str(error)[:500],
                          "processed_at": fields.Datetime.now()})
         return event
+
+    def _auto_analyze_meeting(self, event, meeting):
+        if os.getenv("PPA_AUTO_ANALYZE_MEETINGS", "false").lower() != "true":
+            return
+        if event.event_type != "meeting_ready" or not meeting.transcript:
+            return
+        if self.env["ppa.ai.analysis"].search_count([
+            ("meeting_id", "=", meeting.id), ("status", "=", "completed"),
+        ]):
+            _logger.info("PPA ingestion event %s skipped duplicate meeting analysis for meeting %s", event.id, meeting.id)
+            return
+        try:
+            from .intelligence_service import IntelligenceService
+            analysis = IntelligenceService(self.env).analyze_meeting(meeting)
+            _logger.info(
+                "PPA ingestion event %s auto-analysis %s for meeting %s",
+                event.id, analysis.status, meeting.id,
+            )
+        except Exception as error:
+            _logger.warning("PPA ingestion event %s auto-analysis failed for meeting %s: %s", event.id, meeting.id, error)
 
     def _validate(self, payload, source):
         if source.code == "unknown" or not payload.get("source"):
@@ -80,7 +102,8 @@ class IngestionService:
             values["external_url"] = payload["source_url"]
         participant_ids, participant_names = self._participants(payload.get("participants", []))
         if participant_names:
-            values["participant_names_json"] = json.dumps(participant_names)
+            existing_names = self._participant_names(meeting) if meeting else []
+            values["participant_names_json"] = json.dumps(list(dict.fromkeys(existing_names + participant_names)))
         if meeting:
             if participant_ids:
                 values["participant_ids"] = [(4, partner_id) for partner_id in participant_ids]
@@ -90,6 +113,14 @@ class IngestionService:
             values["participant_ids"] = [(6, 0, participant_ids)]
             meeting = Meeting.create(values)
         return meeting
+
+    @staticmethod
+    def _participant_names(meeting):
+        try:
+            names = json.loads(meeting.participant_names_json or "[]")
+        except (TypeError, ValueError):
+            return []
+        return [name for name in names if isinstance(name, str) and name]
 
     def _participants(self, participants):
         names, partner_ids = [], []

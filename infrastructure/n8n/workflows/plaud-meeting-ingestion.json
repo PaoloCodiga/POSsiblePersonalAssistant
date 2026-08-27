@@ -1,20 +1,43 @@
 {
-  "name": "PPA Plaud Meeting Ingestion (Development)",
+  "name": "PPA Plaud Zapier Meeting Ingestion (Development)",
+  "id": "ppa-plaud-zapier-development",
   "nodes": [
     {
-      "parameters": {"httpMethod": "POST", "path": "ppa/plaud", "responseMode": "lastNode"},
-      "id": "webhook", "name": "Plaud Webhook", "type": "n8n-nodes-base.webhook", "typeVersion": 2, "position": [260, 300]
+      "parameters": {"httpMethod": "POST", "path": "ppa/plaud", "responseMode": "responseNode"},
+      "id": "d8fd0e8a-cd52-4485-bd9d-840f5d66050b", "webhookId": "66d2c6b1-a540-47c5-b1b5-1c221e8c75f6", "name": "Plaud Zapier Webhook", "type": "n8n-nodes-base.webhook", "typeVersion": 2, "position": [260, 300]
     },
     {
-      "parameters": {"jsCode": "const secret = $env.PPA_N8N_WEBHOOK_SECRET;\nif (secret && $json.headers?.['x-ppa-n8n-webhook-secret'] !== secret) throw new Error('Unauthorized Plaud webhook');\nconst body = $json.body || {};\nif (!body.recording_id || !body.event_id) throw new Error('recording_id and event_id are required');\nreturn [{json: {event_id: body.event_id, event_type: body.event_type, recording_id: body.recording_id, title: body.title, started_at: body.started_at, ended_at: body.ended_at, summary: body.summary, transcript: body.transcript, participants: body.participants || [], source_url: body.source_url, raw_payload: body}}];"},
-      "id": "normalize", "name": "Validate and Normalize", "type": "n8n-nodes-base.code", "typeVersion": 2, "position": [500, 300]
+      "parameters": {"jsCode": "const key = $env.PPA_PLAUD_WEBHOOK_KEY;\nconst headers = $json.headers || {};\nconst suppliedKey = headers['x-ppa-plaud-key'] || headers['X-PPA-Plaud-Key'];\nreturn [{ json: { authorized: Boolean(key) && suppliedKey === key, body: $json.body || {} } }];"},
+      "id": "4fd18c81-c6ac-4ca2-9c3a-bab07ae3afc0", "name": "Validate Plaud Webhook Key", "type": "n8n-nodes-base.code", "typeVersion": 2, "position": [480, 300]
     },
     {
-      "parameters": {"method": "POST", "url": "={{ $env.PPA_INTERNAL_BASE_URL + '/ppa/api/integrations/plaud' }}", "sendHeaders": true, "headerParameters": {"parameters": [{"name": "X-PPA-API-Key", "value": "={{ $env.PPA_API_KEY }}"}]}, "sendBody": true, "contentType": "json", "jsonBody": "={{ JSON.stringify($json) }}"},
-      "id": "odoo", "name": "Create PPA Ingestion Event", "type": "n8n-nodes-base.httpRequest", "typeVersion": 4.2, "position": [760, 300]
+      "parameters": {"conditions": {"options": {"caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2}, "conditions": [{"leftValue": "={{ $json.authorized }}", "rightValue": true, "operator": {"type": "boolean", "operation": "true", "singleValue": true}}], "combinator": "and"}},
+      "id": "ad314397-8bd6-430d-ae89-65c9d0bbf55d", "name": "Plaud Webhook Authorized", "type": "n8n-nodes-base.if", "typeVersion": 2.2, "position": [700, 300]
+    },
+    {
+      "parameters": {"jsCode": "const body = $json.body || {};\nconst read = (...paths) => { for (const path of paths) { const value = path.split('.').reduce((item, part) => item && item[part], body); if (value !== undefined && value !== null && value !== '') return value; } return null; };\nconst hash = (value) => { let result = 2166136261; for (const char of String(value)) result = Math.imul(result ^ char.charCodeAt(0), 16777619); return (result >>> 0).toString(16); };\nconst rawType = String(read('event_type', 'trigger_type', 'type', 'event.type') || '').toLowerCase();\nconst eventType = rawType.includes('summary') ? 'meeting_summary_ready' : rawType.includes('transcript') ? 'meeting_transcript_ready' : null;\nif (!eventType) throw new Error('Unsupported Plaud trigger type');\nconst externalId = read('recording_id', 'recordingId', 'recording.id', 'file_id', 'fileId');\nif (!externalId) throw new Error('Plaud recording identifier is required');\nconst transcript = read('transcript', 'transcript_text', 'content.transcript');\nconst summary = read('summary', 'ai_summary', 'content.summary');\nconst eventId = read('event_id', 'eventId', 'zap_event_id', 'zapEventId') || `plaud:${externalId}:${eventType}:${hash([read('updated_at', 'updatedAt', 'generated_at', 'generatedAt', 'created_at', 'createdAt') || '', transcript || summary || ''].join('|'))}`;\nreturn [{json: {source: 'plaud', external_event_id: String(eventId), external_id: String(externalId), event_type: eventType, name: read('title', 'name', 'recording_title', 'recording.title'), started_at: read('started_at', 'startedAt', 'recording.started_at'), ended_at: read('ended_at', 'endedAt', 'recording.ended_at'), transcript, summary, participants: read('participants', 'attendees') || [], source_url: read('source_url', 'url', 'recording.url'), raw_payload: body}}];"},
+      "id": "5f9f7bfe-a0a0-43c2-af70-84a1568e62b2", "name": "Normalize Plaud Zapier Event", "type": "n8n-nodes-base.code", "typeVersion": 2, "position": [920, 220]
+    },
+    {
+      "parameters": {"method": "POST", "url": "={{ $env.PPA_ODOO_INTERNAL_URL + '/ppa/api/ingestion/events' }}", "sendHeaders": true, "headerParameters": {"parameters": [{"name": "X-PPA-API-Key", "value": "={{ $env.PPA_API_KEY }}"}]}, "sendBody": true, "contentType": "json", "specifyBody": "json", "jsonBody": "={{ $json }}"},
+      "id": "bb5e8c96-8e55-49e0-8483-c92f716fbfe3", "name": "Create PPA Ingestion Event", "type": "n8n-nodes-base.httpRequest", "typeVersion": 4.2, "position": [1160, 220]
+    },
+    {
+      "parameters": {"respondWith": "allIncomingItems", "options": {}},
+      "id": "7f514b94-3bf1-451a-a354-79c8592e3085", "name": "Respond to Zapier", "type": "n8n-nodes-base.respondToWebhook", "typeVersion": 1.5, "position": [1400, 220]
+    },
+    {
+      "parameters": {"respondWith": "json", "responseBody": "{\"error\":\"unauthorized\"}", "options": {"responseCode": 401, "responseHeaders": {"entries": [{"name": "Content-Type", "value": "application/json"}]}}},
+      "id": "2270cb3d-578b-4e4d-91bd-421fd85bd86f", "name": "Respond Unauthorized", "type": "n8n-nodes-base.respondToWebhook", "typeVersion": 1.5, "position": [920, 440]
     }
   ],
-  "connections": {"Plaud Webhook": {"main": [[{"node": "Validate and Normalize", "type": "main", "index": 0}]]}, "Validate and Normalize": {"main": [[{"node": "Create PPA Ingestion Event", "type": "main", "index": 0}]]}},
+  "connections": {
+    "Plaud Zapier Webhook": {"main": [[{"node": "Validate Plaud Webhook Key", "type": "main", "index": 0}]]},
+    "Validate Plaud Webhook Key": {"main": [[{"node": "Plaud Webhook Authorized", "type": "main", "index": 0}]]},
+    "Plaud Webhook Authorized": {"main": [[{"node": "Normalize Plaud Zapier Event", "type": "main", "index": 0}], [{"node": "Respond Unauthorized", "type": "main", "index": 0}]]},
+    "Normalize Plaud Zapier Event": {"main": [[{"node": "Create PPA Ingestion Event", "type": "main", "index": 0}]]},
+    "Create PPA Ingestion Event": {"main": [[{"node": "Respond to Zapier", "type": "main", "index": 0}]]}
+  },
   "active": false,
   "settings": {},
   "versionId": "development"
