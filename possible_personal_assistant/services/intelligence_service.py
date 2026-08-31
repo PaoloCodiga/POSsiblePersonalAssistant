@@ -24,11 +24,40 @@ class IntelligenceService:
         analysis = self.env["ppa.ai.analysis"].create({"name": "AI analysis: %s" % message.name, "source_type": "message", "message_id": message.id, "provider": provider.name, "model": "fake" if provider.name == "fake" else os.getenv("PPA_OPENAI_MODEL", ""), "prompt_version": MESSAGE_ANALYSIS_PROMPT_VERSION, "status": "processing"})
         try:
             result = provider.analyze_message(message); self._validate_message(result)
-            analysis.write({"status":"completed","summary":result["summary"],"category":result["category"],"importance":result["importance"],"requires_reply":result["requires_reply"],"requires_action":result["requires_action"],"confidence":result["confidence"],"raw_response_json":json.dumps(result),"processed_at":fields.Datetime.now()})
-            message.write({"ai_processed":True,"ai_summary":result["summary"],"ai_category":result["category"],"ai_importance":result["importance"],"ai_confidence":result["confidence"],"requires_reply":result["requires_reply"],"requires_action":result["requires_action"]})
-            for action in result.get("suggested_actions", []): self.env["ppa.suggested.action"].create({"name":action["title"],"description":action.get("description"),"priority":action.get("priority","normal"),"due_date":self._due_date(action.get("due_date")),"source_type":"message","source_message_id":message.id,"ai_analysis_id":analysis.id,"ai_confidence":action.get("confidence",0),"ai_reason":action.get("reason")})
+            analysis.write({"status":"completed","summary":result["summary"],"category":result["category"],"importance":result["importance"],"requires_reply":result["requires_reply"],"requires_action":result["requires_action"],"suggested_flow":result.get("suggested_flow"),"suggested_project":result.get("suggested_project"),"suggested_owner":result.get("suggested_owner"),"reasoning_summary":result.get("reasoning_summary"),"confidence":result["confidence"],"raw_response_json":json.dumps(result),"processed_at":fields.Datetime.now()})
+            message.write({"ai_processed":True,"ai_summary":result["summary"],"ai_category":result["category"],"ai_importance":result["importance"],"ai_confidence":result["confidence"],"ai_reasoning_summary":result.get("reasoning_summary"),"requires_reply":result["requires_reply"],"requires_action":result["requires_action"]})
+            self._resolve_message_context(message, result)
+            for action in result.get("suggested_actions", []): self.env["ppa.suggested.action"].create({"name":action["title"],"description":action.get("description"),"priority":action.get("priority","normal"),"due_date":self._due_date(action.get("due_date")),"raw_deadline_text":action.get("due_date") if not self._due_date(action.get("due_date")) else False,"source_type":"message","source_message_id":message.id,"ai_analysis_id":analysis.id,"ai_confidence":action.get("confidence",0),"ai_reason":action.get("reason")})
             return analysis
         except Exception as error: return self._failed(analysis, error)
+    def _resolve_message_context(self, message, result):
+        conversation = message.conversation_id
+        if not conversation:
+            return
+        flow = conversation.flow_id
+        if not flow and result.get("suggested_flow"):
+            flows = self.env["ppa.flow"].search([("name", "=ilike", result["suggested_flow"])])
+            flows = flows.filtered(lambda item: self._same_name(item.name, result["suggested_flow"]))
+            if len(flows) == 1:
+                conversation.flow_id = flows.id
+                flow = flows
+        if flow and flow.project_id and not conversation.project_id:
+            conversation.project_id = flow.project_id.id
+        if not conversation.project_id and result.get("suggested_project"):
+            projects = self.env["project.project"].search([("name", "=ilike", result["suggested_project"])])
+            projects = projects.filtered(lambda item: self._same_name(item.name, result["suggested_project"]))
+            if len(projects) == 1:
+                conversation.project_id = projects.id
+        values = {}
+        if not message.flow_id and conversation.flow_id: values["flow_id"] = conversation.flow_id.id
+        if not message.project_id and conversation.project_id: values["project_id"] = conversation.project_id.id
+        if not message.owner_id and result.get("suggested_owner"):
+            owner = resolve_user(self.env, result["suggested_owner"])
+            if owner: values["owner_id"] = owner.id
+        if values: message.write(values)
+    @staticmethod
+    def _same_name(left, right):
+        return " ".join((left or "").split()).casefold() == " ".join((right or "").split()).casefold()
     def analyze_meeting(self, meeting):
         provider=self._provider(); analysis=self.env["ppa.ai.analysis"].create({"name":"AI analysis: %s"%meeting.name,"source_type":"meeting","meeting_id":meeting.id,"provider":provider.name,"model":"fake" if provider.name=="fake" else os.getenv("PPA_OPENAI_MODEL",""),"prompt_version":MEETING_ANALYSIS_PROMPT_VERSION,"status":"processing"})
         try:

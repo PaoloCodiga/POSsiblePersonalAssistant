@@ -10,12 +10,15 @@ class PpaIngestionEvent(models.Model):
 
     name = fields.Char(required=True)
     source_id = fields.Many2one("ppa.source", required=True, index=True)
+    mailbox_id = fields.Many2one("ppa.mailbox", ondelete="set null", readonly=True, index=True)
     external_event_id = fields.Char(index=True)
     external_object_id = fields.Char(index=True)
+    imap_uid = fields.Char(index=True)
     event_type = fields.Selection([
         ("meeting_transcript_ready", "Meeting Transcript Ready"),
         ("meeting_summary_ready", "Meeting Summary Ready"),
         ("meeting_ready", "Meeting Ready"),
+        ("email_received", "Email Received"),
         ("manual_import", "Manual Import"),
         ("unknown", "Unknown"),
     ], default="unknown", required=True)
@@ -28,6 +31,8 @@ class PpaIngestionEvent(models.Model):
     raw_payload_json = fields.Text(groups="possible_personal_assistant.group_ppa_manager")
     normalized_payload_json = fields.Text(groups="possible_personal_assistant.group_ppa_manager")
     meeting_id = fields.Many2one("ppa.meeting", readonly=True, index=True)
+    message_id = fields.Many2one("ppa.message", readonly=True, index=True)
+    conversation_id = fields.Many2one("ppa.conversation", readonly=True, index=True)
     error_message = fields.Text(readonly=True)
     retry_count = fields.Integer(default=0, readonly=True)
     active = fields.Boolean(default=True)

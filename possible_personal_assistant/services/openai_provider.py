@@ -19,7 +19,7 @@ class OpenAiProvider(AiProvider):
     _PRIORITY = ["low", "normal", "important", "critical"]
 
     def analyze_message(self, message):
-        content = "Subject: %s\nBody: %s" % (message.subject or "", message.body or "")
+        content = "Subject: %s\nBody: %s" % (message.subject or "", message.email_text_body or message.body or "")
         return self._analyze(MESSAGE_ANALYSIS_SYSTEM_PROMPT, content, self._message_schema())
 
     def analyze_meeting(self, meeting):
@@ -91,14 +91,17 @@ class OpenAiProvider(AiProvider):
                 "additionalProperties": False,
                 "properties": {
                     "summary": {"type": "string"},
-                    "category": {"type": "string", "enum": ["customer_request", "technical", "sales", "administrative", "finance", "project", "internal", "notification", "spam", "other"]},
+                    "category": {"type": "string", "enum": ["customer", "supplier", "internal", "administrative", "technical", "sales", "support", "other", "customer_request", "finance", "project", "notification", "spam"]},
                     "importance": {"type": "string", "enum": cls._IMPORTANCE},
                     "requires_reply": {"type": "boolean"},
                     "requires_action": {"type": "boolean"},
+                    "suggested_flow": {"type": ["string", "null"]},
+                    "suggested_project": {"type": ["string", "null"]},
+                    "suggested_owner": {"type": ["string", "null"]},
                     "confidence": {"type": "number", "minimum": 0, "maximum": 1},
                     "suggested_actions": {"type": "array", "items": cls._message_action_schema()},
                 },
-                "required": ["summary", "category", "importance", "requires_reply", "requires_action", "confidence", "suggested_actions"],
+                "required": ["summary", "category", "importance", "requires_reply", "requires_action", "suggested_flow", "suggested_project", "suggested_owner", "confidence", "suggested_actions"],
             },
         }
 

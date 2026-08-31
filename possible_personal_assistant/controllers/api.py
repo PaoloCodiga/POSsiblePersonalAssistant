@@ -114,7 +114,8 @@ class PpaApiController(http.Controller):
         if event.status == "failed":
             return self._json_response({"id": event.id, "status": "failed"}, status=400)
         return self._json_response(
-            {"id": event.id, "meeting_id": event.meeting_id.id, "status": "created" if created else "existing"},
+            {"id": event.id, "meeting_id": event.meeting_id.id, "message_id": event.message_id.id,
+             "conversation_id": event.conversation_id.id, "status": "created" if created else "existing"},
             status=201 if created else 200,
         )
 
@@ -126,8 +127,10 @@ class PpaApiController(http.Controller):
         payload, error = self._payload()
         if error:
             return error
-        if not payload.get("event_id") or not payload.get("recording_id"):
-            return self._json_response({"error": "event_id and recording_id are required."}, status=400)
+        if not payload.get("event_id") or not (
+            payload.get("recording_id") or payload.get("file_id") or payload.get("create_time") or payload.get("createTime")
+        ):
+            return self._json_response({"error": "event_id and either recording_id, file_id, or create_time are required."}, status=400)
         event_types = {
             "transcript_generated": "meeting_transcript_ready",
             "summary_generated": "meeting_summary_ready",
@@ -136,7 +139,9 @@ class PpaApiController(http.Controller):
         if payload.get("event_type") not in event_types:
             return self._json_response({"error": "Invalid Plaud event_type."}, status=400)
         normalized = {
-            "source": "plaud", "external_id": payload["recording_id"],
+            "source": "plaud", "external_id": payload.get("recording_id") or payload.get("file_id"),
+            "recording_id": payload.get("recording_id"), "file_id": payload.get("file_id"),
+            "create_time": payload.get("create_time") or payload.get("createTime"),
             "external_event_id": payload["event_id"],
             "event_type": event_types[payload["event_type"]],
             "name": payload.get("title"), "started_at": payload.get("started_at"),

@@ -1,0 +1,11 @@
+<odoo noupdate="1">
+ <record id="ir_cron_ppa_mailbox_sync" model="ir.cron">
+  <field name="name">PPA: synchronize due mailboxes</field>
+  <field name="model_id" ref="model_ppa_mailbox"/>
+  <field name="state">code</field>
+  <field name="code">model.cron_sync_due_mailboxes()</field>
+  <field name="interval_number">5</field>
+  <field name="interval_type">minutes</field>
+  <field name="active">True</field>
+ </record>
+</odoo>

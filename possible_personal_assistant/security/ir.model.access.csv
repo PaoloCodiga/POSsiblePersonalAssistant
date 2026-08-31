@@ -1,5 +1,8 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 access_ppa_source_manager,ppa.source manager,model_ppa_source,possible_personal_assistant.group_ppa_manager,1,1,1,1
+access_ppa_flow_user,ppa.flow user,model_ppa_flow,possible_personal_assistant.group_ppa_user,1,1,1,0
+access_ppa_flow_manager,ppa.flow manager,model_ppa_flow,possible_personal_assistant.group_ppa_manager,1,1,1,1
+access_ppa_mailbox_manager,ppa.mailbox manager,model_ppa_mailbox,possible_personal_assistant.group_ppa_manager,1,1,1,1
 access_ppa_conversation_user,ppa.conversation user,model_ppa_conversation,possible_personal_assistant.group_ppa_user,1,1,1,0
 access_ppa_conversation_manager,ppa.conversation manager,model_ppa_conversation,possible_personal_assistant.group_ppa_manager,1,1,1,1
 access_ppa_message_user,ppa.message user,model_ppa_message,possible_personal_assistant.group_ppa_user,1,1,1,0

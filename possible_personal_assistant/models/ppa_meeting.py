@@ -1,4 +1,4 @@
-from odoo import fields, models
+from odoo import api, fields, models
 
 
 class PpaMeeting(models.Model):
@@ -19,6 +19,7 @@ class PpaMeeting(models.Model):
     participant_ids = fields.Many2many("res.partner", string="Participants", tracking=True)
     participant_names_json = fields.Text(groups="possible_personal_assistant.group_ppa_manager")
     company_id = fields.Many2one("res.company", default=lambda self: self.env.company, tracking=True)
+    flow_id = fields.Many2one("ppa.flow", ondelete="set null", tracking=True)
     project_id = fields.Many2one("project.project", tracking=True)
     transcript = fields.Html(sanitize=True)
     summary = fields.Html(sanitize=True)
@@ -34,6 +35,21 @@ class PpaMeeting(models.Model):
     decision_ids = fields.One2many("ppa.decision", "source_meeting_id", string="Related Decisions")
     active = fields.Boolean(default=True)
     _source_external_unique = models.Constraint("UNIQUE(source_id, external_id)", "The external meeting ID must be unique per source.")
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        for values in vals_list:
+            flow = self.env["ppa.flow"].browse(values.get("flow_id"))
+            if flow and flow.project_id:
+                values["project_id"] = flow.project_id.id
+        return super().create(vals_list)
+
+    def write(self, values):
+        if "flow_id" in values:
+            flow = self.env["ppa.flow"].browse(values.get("flow_id"))
+            if flow and flow.project_id:
+                values["project_id"] = flow.project_id.id
+        return super().write(values)
 
     def action_analyze_with_ai(self):
         from ..services.intelligence_service import IntelligenceService
