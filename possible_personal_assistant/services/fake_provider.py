@@ -9,11 +9,11 @@ class FakeProvider(AiProvider):
         if "provider failure" in text.lower():
             raise RuntimeError("Fake provider failure")
         if "closed" in text.lower():
-            return {"summary": "Informational notification.", "category": "notification", "importance": "normal", "requires_reply": False, "requires_action": False, "confidence": 0.9, "suggested_actions": []}
+            return {"summary": "Informational notification.", "category": "other", "importance": "normal", "requires_reply": False, "requires_action": False, "suggested_flow": None, "suggested_project": None, "suggested_owner": None, "confidence": 0.9, "suggested_actions": []}
         actions = [{"title": "Verify updated prices", "description": "Verify the prices requested in the message.", "priority": "important", "confidence": 0.9, "reason": "The message requests price verification."}]
         if "multiple actions" in text.lower():
             actions = actions * 3
-        return {"summary": "Customer requests confirmation of updated prices.", "category": "customer_request", "importance": "important", "requires_reply": True, "requires_action": True, "confidence": 0.94, "suggested_actions": actions}
+        return {"summary": "Customer requests confirmation of updated prices.", "category": "customer", "importance": "important", "requires_reply": True, "requires_action": True, "suggested_flow": None, "suggested_project": None, "suggested_owner": None, "confidence": 0.94, "suggested_actions": actions}
 
     def analyze_meeting(self, meeting):
         text = "%s %s" % (meeting.name or "", meeting.transcript or "")
